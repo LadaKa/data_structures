@@ -55,18 +55,20 @@ class SuffixArray {
     int num_kgrams(int k)
     {
 		init_LCP();
-	//	print_sorted_suffixes();
 
-		int kgrams_number = 0;
-		int len = text.length();
+		int kgrams_number = 0;	
 		int index = 0; 
+		int len = text.length();
+
 		while (index < S.size())
 		{
 			if (len - S[index] >= k)
 			{
+				// prefix of suffix S[index] is the new k-gram
 				kgrams_number++;
 				while (index < S.size() && LCP[index] >= k)
 				{
+					// suffixes that starts with the same prefix
 					index++;
 				}
 			}
@@ -79,39 +81,34 @@ class SuffixArray {
 
 private:
 
-	vector<int> LCP;
-
-	// DEBUG
-	void print_sorted_suffixes()
-	{
-		for (int i = 0; i < S.size(); i++)
-		{
-			cout << i << ": " << text.substr(S[i]) << "  " << LCP[i] << endl;
-		}
-	}
-
-	
+	vector<int> LCP;			// array of longest common prefixes
+								// LPC[i]  ~ length of the longest common prefix of S[i] and S[i+1]
 	void init_LCP()
 	{
-		int n = S.size();
 		LCP.resize(S.size());
-		for (int i = 0, h = 0; i < n; i++) 
+
+		int s_size = S.size();	
+		for (int i = 0, lcp_len = 0; i < s_size; i++) 
 		{
-			if (R[i] < n - 1) 
+			if (R[i] < s_size - 1) 
 			{			
+				// start position in text of the next suffix 
 				int j = S[R[i] + 1];
 
 				while (
-					max(i, j) + h < text.length()
+					max(i, j) + lcp_len < text.length()
 					&&
-					text[i + h] == text[j + h])
+					text[i + lcp_len] == text[j + lcp_len])
 				{
-					h++;
+					lcp_len++;
 				}
-				LCP[R[i]] = h;
 
-				if (h > 0)
-					h--; 
+				// longest common prefix of length lcp_len:
+				// text[i, .., i + lcp_len] == text[j, .., i + lcp_len]
+				LCP[R[i]] = lcp_len;
+
+				if (lcp_len > 0)
+					lcp_len--; 
 			}
 		}
 	}
