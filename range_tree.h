@@ -252,9 +252,9 @@ public:
 		return node_last;
 	}
 
-	int sum_subtree(Node* node) {
+	int64_t sum_subtree(Node* node) {
 
-		int result = node->value;
+		int64_t result = node->value;
 		if (node->left) {
 			result = result + sum_subtree(node->left);
 		}
