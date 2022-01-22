@@ -1,11 +1,14 @@
 #include <cstdint>
 #include <limits>
+#include <iostream>
+using namespace std;
 
 // A node of the tree
 class Node {
 public:
 	int64_t key;
 	int64_t value;
+	int64_t subtree_value_sum;
 	Node* left;
 	Node* right;
 	Node* parent;
@@ -14,13 +17,33 @@ public:
 	Node(int64_t key, int64_t value, Node* parent = nullptr, Node* left = nullptr, Node* right = nullptr) {
 		this->key = key;
 		this->value = value;
+		this->subtree_value_sum = value;
 		this->parent = parent;
 		this->left = left;
 		this->right = right;
-		if (left) left->parent = this;
-		if (right) right->parent = this;
+		if (left) {
+			left->parent = this;
+			this->subtree_value_sum = this->subtree_value_sum + left->subtree_value_sum;
+		}
+		if (right) {
+			right->parent = this;
+			this->subtree_value_sum = this->subtree_value_sum + right->subtree_value_sum;
+		}
 	}
 
+	void setLeftChild(Node* child) {
+		if (left)
+			subtree_value_sum = subtree_value_sum - left->subtree_value_sum;
+		left = child;
+		subtree_value_sum = subtree_value_sum + child->subtree_value_sum;
+	}
+
+	void setRightChild(Node* child) {
+		if (right)
+			subtree_value_sum = subtree_value_sum - right->subtree_value_sum;
+		right = child;
+		subtree_value_sum = subtree_value_sum + child->subtree_value_sum;
+	}
 };
 
 // Splay tree
