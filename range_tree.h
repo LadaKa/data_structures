@@ -157,6 +157,7 @@ public:
 	// Given a closed range [left, right], return the sum of values of elements
 	// in the range, i.e., sum(value | (key, value) in tree, left <= key <= right).
 	int64_t range_sum(int64_t left, int64_t right) {
+
 		Node* left_node = lookup_nearest_greater(left);
 		if (!left_node)
 			return 0;
@@ -201,8 +202,8 @@ public:
 			node_last = node;
 			node = node->right;
 		}
-		while (node && node->key >= key) {
-			node_last = node;//
+		while (node && node->key > key) {
+			node_last = node;
 			node = node->left;
 		}
 
@@ -223,7 +224,7 @@ public:
 			node_last = node;
 			node = node->left;
 		}
-		while (node && node->key <= key) {
+		while (node && node->key < key) {
 			node_last = node;
 			node = node->right;
 		}
