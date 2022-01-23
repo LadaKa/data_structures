@@ -8,7 +8,7 @@ class Node {
 public:
 	int64_t key;
 	int64_t value;
-	int64_t subtree_value_sum;
+	int64_t subtree_value_sum; // = value + subtree_value_sum of children 
 	Node* left;
 	Node* right;
 	Node* parent;
@@ -31,18 +31,22 @@ public:
 		}
 	}
 
-	void setLeftChild(Node* child) {
+	// Add left child and update subtree_value_sum
+	void addLeftChild(Node* child) {
 		if (left)
 			subtree_value_sum = subtree_value_sum - left->subtree_value_sum;
 		left = child;
-		subtree_value_sum = subtree_value_sum + child->subtree_value_sum;
+		if (child)
+			subtree_value_sum = subtree_value_sum + child->subtree_value_sum;
 	}
 
-	void setRightChild(Node* child) {
+	// Add left child and update subtree_value_sum
+	void addRightChild(Node* child) {
 		if (right)
 			subtree_value_sum = subtree_value_sum - right->subtree_value_sum;
 		right = child;
-		subtree_value_sum = subtree_value_sum + child->subtree_value_sum;
+		if (child)
+			subtree_value_sum = subtree_value_sum + child->subtree_value_sum;
 	}
 };
 
@@ -62,14 +66,16 @@ public:
 	virtual void rotate(Node* node) {
 		if (node->parent) {
 			if (node->parent->left == node) {
-				if (node->right) node->right->parent = node->parent;
-				node->parent->left = node->right;
-				node->right = node->parent;
+				if (node->right)
+					node->right->parent = node->parent;
+				node->parent->addLeftChild(node->right);
+				node->addRightChild(node->parent);
 			}
 			else {
-				if (node->left) node->left->parent = node->parent;
-				node->parent->right = node->left;
-				node->left = node->parent;
+				if (node->left)
+					node->left->parent = node->parent;
+				node->parent->addRightChild(node->left);
+				node->addLeftChild(node->parent);
 			}
 			if (node->parent->parent) {
 				if (node->parent->parent->left == node->parent)
@@ -130,9 +136,10 @@ public:
 			root = new Node(key, value);
 			return;
 		}
-
 		Node* node = root;
 		while (node->key != key) {
+			if (node)
+				node->subtree_value_sum = node->subtree_value_sum + value;
 			if (key < node->key) {
 				if (!node->left)
 					node->left = new Node(key, value, node);
@@ -181,19 +188,25 @@ public:
 	// in the range, i.e., sum(value | (key, value) in tree, left <= key <= right).
 	int64_t range_sum(int64_t left, int64_t right) {
 
+		int64_t sum = root->subtree_value_sum;
+
+		// Look up and splay the node with the nearest greater key.
+		// Subtract the values in its left subtree.
 		Node* left_node = lookup_nearest_greater(left);
 		if (!left_node)
-			return 0;
+			return 0;	// all keys are smaller than left
+		if (left_node->left)
+			sum = sum - left_node->left->subtree_value_sum;
 
-		left_node->left = nullptr;
-
+		// Look up and splay the node with the nearest smaller key.
+		// Subtract the values in its right subtree.
 		Node* right_node = lookup_nearest_smaller(right);
 		if (!right_node)
-			return 0;
+			return 0;	// all keys are greater than right
+		if (right_node->right)
+			sum = sum - right_node->right->subtree_value_sum;
 
-		right_node->right = nullptr;
-
-		return sum_subtree(root);
+		return sum;
 	}
 
 	// Destructor to free all allocated memory.
@@ -217,10 +230,15 @@ public:
 		}
 	}
 
+private:
+
+	// Look up and splay the node with given key,
+	// or node with the nearest smaller key
 	Node* lookup_nearest_smaller(int64_t key) {
 
 		Node* node = root;
 		Node* node_last = nullptr;
+
 		if (node && node->key < key) {
 			node_last = node;
 			node = node->right;
@@ -234,11 +252,14 @@ public:
 		if (node_last)
 			splay(node_last);
 		if (node_last->key <= key)
-			return node_last;	
+			return node_last;
 
+		// all keys are smaller than key
 		return nullptr;
 	}
 
+	// Look up and splay the node with given key,
+	// or node with the nearest greater key
 	Node* lookup_nearest_greater(int64_t key) {
 
 		Node* node = root;
@@ -258,9 +279,12 @@ public:
 		if (node_last->key >= key)
 			return node_last;
 
+		// all keys are smaller than key
 		return nullptr;
 	}
 
+	// Look up the node with given key,
+	// or possible parent of this node
 	Node* look_up_or_get_possible_parent(Node* node, Node* node_last, int64_t key) {
 
 		while (node) {
@@ -275,15 +299,4 @@ public:
 		return node_last;
 	}
 
-	int64_t sum_subtree(Node* node) {
-
-		int64_t result = node->value;
-		if (node->left) {
-			result = result + sum_subtree(node->left);
-		}
-		if (node->right) {
-			result = result + sum_subtree(node->right);
-		}
-		return result;
-	}
 };
