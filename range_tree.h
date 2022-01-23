@@ -209,6 +209,25 @@ public:
 		return sum;
 	}
 
+
+	// Given a closed range [left, right], 
+	// adds delta to the values of elements in the range.
+	int64_t range_update(int64_t left, int64_t right, int64_t delta) {
+
+		// Look up and splay the node with the nearest greater key.
+		Node* left_node = lookup_nearest_greater(left);
+		if (!left_node)
+			return;	// all keys are smaller than left
+
+		// Look up and splay the node with the nearest smaller key.
+		Node* right_node = lookup_nearest_smaller(right);
+		if (!right_node)
+			return;	// all keys are greater than right
+		
+		update_values_in_the_range(delta, left_node, right_node);
+	}
+
+
 	// Destructor to free all allocated memory.
 	~Tree() {
 		Node* node = root;
@@ -298,5 +317,25 @@ private:
 		}
 		return node_last;
 	}
+
+	// ...
+	void update_values_in_the_range(int64_t delta, Node* left_bound_node, Node* rigth_bound_node) {
+
+		rigth_bound_node->value = rigth_bound_node->value + delta;
+		if (rigth_bound_node->right) {
+			update_values_in_the_range(delta, left_bound_node, rigth_bound_node->right);
+		}
+		if (rigth_bound_node->left) {
+			if (rigth_bound_node->left->key == left_bound_node->key) {
+				rigth_bound_node->left->value = rigth_bound_node->left->value + delta;
+				return;
+			}
+			if (rigth_bound_node->left->key < left_bound_node->key) {
+				return;
+			}
+			update_values_in_the_range(delta, left_bound_node, rigth_bound_node->left);
+		}
+	}
+
 
 };
