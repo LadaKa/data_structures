@@ -1,4 +1,4 @@
-// Code from:
+// Modified code from :
 // https://gitlab.kam.mff.cuni.cz/datovky/assignments/-/blob/master/12-range_tree/cpp/range_tree_test.cpp
 
 #include <algorithm>
@@ -64,6 +64,31 @@ void test_updates(int64_t size, bool ascending) {
 	}
 }
 
+void test_range_update(int64_t size, bool ascending)
+{
+
+	int64_t left;
+	int64_t right;
+	int64_t delta = 10;
+
+	for (int64_t i = -size; i <= size + 1; i++) {
+		for (int64_t j = -size; j <= size + 1; j++) {
+
+			cout << i << " " << j << endl;
+			Tree tree;
+			create_test_tree(size, ascending, tree);
+
+			tree.remove(i);
+			tree.insert(i, 0);
+
+			int result = tree.test_range_update(i, j, delta);
+				
+			EXPECT(result == 0, "Error in range update.");
+		}
+
+	}
+}
+
 
 vector<pair<string, function<void()>>> tests = {
 	{"random_missing", [] { test_missing(13, false); }},
@@ -81,4 +106,6 @@ vector<pair<string, function<void()>>> tests = {
 	{"path_missing_big", [] { test_missing(199999, true); }},
 	{"path_suffixes_big", [] { test_suffixes(199999, true); }},
 	{"path_updates_big", [] { test_updates(199999, true); }},
+	
+	{"range_update", [] { test_range_update(13, true); }},
 };
