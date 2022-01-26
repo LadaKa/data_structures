@@ -48,13 +48,6 @@ public:
 		if (child)
 			subtree_value_sum = subtree_value_sum + child->subtree_value_sum;
 	}
-
-	// Add delta to value and subtree_value_sum
-	void increaseValue(int64_t delta) {
-		value = value + delta;
-		subtree_value_sum = subtree_value_sum + delta;
-	}
-
 };
 
 // Splay tree
@@ -195,10 +188,6 @@ public:
 	// in the range, i.e., sum(value | (key, value) in tree, left <= key <= right).
 	int64_t range_sum(int64_t left, int64_t right) {
 
-		// Empty range
-		if (left > right)
-			return 0;
-
 		int64_t sum = root->subtree_value_sum;
 
 		// Look up and splay the node with the nearest greater key.
@@ -238,7 +227,7 @@ public:
 		Node* right_node = lookup_nearest_smaller(right);
 		if (!right_node)
 			return;	// all keys are greater than right
-		
+
 
 		update_values(delta, right_node, left_node);
 	}
@@ -254,12 +243,11 @@ public:
 
 		int64_t expected_sum_after_update = sum + (delta * nodes_in_range_count);
 		EXPECT(
-			expected_sum_after_update == sum_after_update, 
+			expected_sum_after_update == sum_after_update,
 			error_msg_expected_sum_after_update(sum_after_update, expected_sum_after_update));
 
 		return 0;
 	}
-
 
 	// Destructor to free all allocated memory.
 	~Tree() {
@@ -295,17 +283,16 @@ private:
 			node_last = node;
 			node = node->right;
 		}
-
-		if (node_last && node_last->key <= key) {
-			splay(node_last);
-			return node_last;
-		}
-
+		
 		while (node && node->key > key) {
 			node_last = node;
 			node = node->left;
 		}
-
+		if (!node && node_last->parent && node_last->parent->key <= key)
+		{
+			node_last = node_last->parent;
+		}
+	
 		node_last = look_up_or_get_possible_parent(node, node_last, key);
 		if (node_last)
 			splay(node_last);
@@ -357,13 +344,14 @@ private:
 		return node_last;
 	}
 
-	// ...
-
 	void update_values(int64_t delta, Node* rigth_bound_node, Node* left_bound_node) {
 
-		rigth_bound_node->increaseValue(delta);
-		if (rigth_bound_node->key == left_bound_node->key)
+		if (rigth_bound_node->key == left_bound_node->key) {
+			rigth_bound_node->value = rigth_bound_node->value + delta;
 			return;
+		}
+
+		rigth_bound_node->value = rigth_bound_node->value + delta;
 		update_values_from_right_to_left(delta, rigth_bound_node->key, rigth_bound_node->left, left_bound_node);
 		if (rigth_bound_node->right) {
 			rigth_bound_node->subtree_value_sum = rigth_bound_node->subtree_value_sum + rigth_bound_node->right->subtree_value_sum;
@@ -382,20 +370,20 @@ private:
 		rigth_bound_node->subtree_value_sum = rigth_bound_node->value;
 
 		if (rigth_bound_node->right) {
-			
+
 			update_values_from_right_to_left(delta, right_bound, rigth_bound_node->right, left_bound_node);
 			rigth_bound_node->subtree_value_sum = rigth_bound_node->subtree_value_sum + rigth_bound_node->right->subtree_value_sum;
 		}
 		if (rigth_bound_node->left) {
-			
+
 			if (rigth_bound_node->left->key < left_bound_node->key) {
 				return;
 			}
-			
+
 			update_values_from_right_to_left(delta, right_bound, rigth_bound_node->left, left_bound_node);
 			rigth_bound_node->subtree_value_sum = rigth_bound_node->subtree_value_sum + rigth_bound_node->left->subtree_value_sum;
 		}
-		
+
 	}
 
 
@@ -440,13 +428,13 @@ private:
 		int64_t expected_sum_after_update)
 	{
 		return "Expected subtree_value_sum of root after range update is "
-			+ to_string(expected_sum_after_update) 
-			+ "; subtree_value_sum of root after range update is " 
+			+ to_string(expected_sum_after_update)
+			+ "; subtree_value_sum of root after range update is "
 			+ to_string(sum_after_update);
 	}
 
 	int get_count_nodes_in_range(int64_t left, int64_t right) {
-		
+
 		return get_count_nodes_in_range(left, right, root, 0);
 	}
 
@@ -464,6 +452,5 @@ private:
 
 		return count;
 	}
-
 
 };
