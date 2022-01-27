@@ -229,9 +229,10 @@ public:
 			return;	// all keys are greater than right
 
 
-		update_values(delta, right_node, left_node);
+		update_values_between_nodes(delta, right_node, left_node);
 	}
 
+	// TEST method for range_update
 	int test_range_update(int64_t left, int64_t right, int64_t delta) {
 
 		int nodes_in_range_count = get_count_nodes_in_range(left, right);
@@ -344,7 +345,14 @@ private:
 		return node_last;
 	}
 
-	void update_values(int64_t delta, Node* rigth_bound_node, Node* left_bound_node) {
+
+	/*********************************************************************************************************************** 
+	
+	Methods and test for range_update 
+	
+	************************************************************************************************************************/
+
+	void update_values_between_nodes(int64_t delta, Node* rigth_bound_node, Node* left_bound_node) {
 
 		if (rigth_bound_node->key == left_bound_node->key) {
 			rigth_bound_node->value = rigth_bound_node->value + delta;
@@ -352,7 +360,7 @@ private:
 		}
 
 		rigth_bound_node->value = rigth_bound_node->value + delta;
-		update_values_from_right_to_left(delta, rigth_bound_node->key, rigth_bound_node->left, left_bound_node);
+		update_values_from_right_to_left(delta, rigth_bound_node->left, left_bound_node);
 		if (rigth_bound_node->right) {
 			rigth_bound_node->subtree_value_sum = rigth_bound_node->subtree_value_sum + rigth_bound_node->right->subtree_value_sum;
 		}
@@ -361,7 +369,7 @@ private:
 		}
 	}
 
-	void update_values_from_right_to_left(int64_t delta, int64_t right_bound, Node* rigth_bound_node, Node* left_bound_node) {
+	void update_values_from_right_to_left(int64_t delta, Node* rigth_bound_node, Node* left_bound_node) {
 
 		if (!rigth_bound_node)
 			return; // the only one node in range is rigth_bound_node->parent
@@ -371,7 +379,7 @@ private:
 
 		if (rigth_bound_node->right) {
 
-			update_values_from_right_to_left(delta, right_bound, rigth_bound_node->right, left_bound_node);
+			update_values_from_right_to_left(delta, rigth_bound_node->right, left_bound_node);
 			rigth_bound_node->subtree_value_sum = rigth_bound_node->subtree_value_sum + rigth_bound_node->right->subtree_value_sum;
 		}
 		if (rigth_bound_node->left) {
@@ -380,18 +388,14 @@ private:
 				return;
 			}
 
-			update_values_from_right_to_left(delta, right_bound, rigth_bound_node->left, left_bound_node);
+			update_values_from_right_to_left(delta, rigth_bound_node->left, left_bound_node);
 			rigth_bound_node->subtree_value_sum = rigth_bound_node->subtree_value_sum + rigth_bound_node->left->subtree_value_sum;
 		}
 
 	}
 
 
-	/* TEST methods for range_update */
-
-	// If the condition is not true, report an error and halt.
-#define EXPECT(condition, message) do { if (!(condition)) expect_failed(message); } while (0)
-
+	/* TEST utils for range_update */
 
 	int64_t sum_subtree_values() {
 
@@ -415,13 +419,6 @@ private:
 		return result;
 	}
 
-	string error_msg_sum_subtree_values(Node* node, int64_t result)
-	{
-		return "Expected subtree_value_sum of node ("
-			+ to_string(node->key) + ", " + to_string(node->value) + ") "
-			+ "is " + to_string(result)
-			+ "; node->subtree_value_sum is " + to_string(node->subtree_value_sum);
-	}
 
 	string error_msg_expected_sum_after_update(
 		int64_t sum_after_update,
@@ -433,10 +430,12 @@ private:
 			+ to_string(sum_after_update);
 	}
 
+
 	int get_count_nodes_in_range(int64_t left, int64_t right) {
 
 		return get_count_nodes_in_range(left, right, root, 0);
 	}
+	
 
 	int get_count_nodes_in_range(int64_t left, int64_t right, Node* node, int current_count) {
 
@@ -452,5 +451,37 @@ private:
 
 		return count;
 	}
+
+	
+	/*
+	//	TEST in range_tree_test.cpp:	result == 0  ...OK	
+
+	//	TODO:
+	//		fix error for TEST modification:
+	//			insert and remove ((i + j) / 2)
+
+void test_range_update(int64_t size, bool ascending)
+{
+	int64_t left;
+	int64_t right;
+	int64_t delta = 10;
+
+	for (int64_t i = -size; i <= size + 1; i++) {
+		for (int64_t j = -size; j <= size + 1; j++) {
+
+			if (i == -13 && j == -11)
+				cout << i << " " << j << endl;
+			Tree tree;
+			create_test_tree(size, ascending, tree);
+
+			tree.remove(i);
+			tree.insert(i, i);
+
+			int result = tree.test_range_update(i, j, delta);
+			EXPECT(result == 0, "Error");
+		}
+	}
+}
+	*/
 
 };
