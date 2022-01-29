@@ -1,101 +1,111 @@
 #include <bitset>
+#include <unordered_map>
 
-/*** Bloom Filter ***/
+/*** Bit array of hashes for given data ***/
 
-class bloom_filter {
+class hash_bit_array {
 
 public:
 
-	bloom_filter(int hash_functions_count)
+	static const int bit_array_size = 30000000;
+
+	bool look_up(string line, int hash_key)
 	{
-		hash_count = hash_functions_count;
+		return (bit_array[hash_key]);
+	}
+
+	void insert(string line, int hash_key)
+	{
+		bit_array[hash_key] = true;
 	}
 
 
-	bool look_up(string line)
+	bool is_duplicate(string line, int hash_key)
 	{
-		vector<int> hash_keys = get_keys(line);
-		bool all_true = bit_array[hash_keys[0]];
 
-		int index = 1;
-		while (all_true && index < hash_count)
-		{
-			all_true = all_true && bit_array[hash_keys[index]];
-			index++;
-		}
-
-		return all_true;
-	}
-
-
-	void insert(string line)
-	{
-		vector<int> hash_keys = get_keys(line);
-
-		for (int i = 0; i < hash_count; i++)
-		{
-			bit_array[hash_keys[i]] = true;
-		}
-	}
-
-
-	bool is_duplicate(string line)
-	{
-		if (look_up(line))
+		if (look_up(line, hash_key))
 			return true;
 
-		insert(line);
+		insert(line, hash_key);
 		return false;
 	}
 
+
 private:
 
-	int hash_count;
-	int primes[8] = { 7, 13, 17, 23, 31, 37, 41 };
-	static const int bit_array_size = 512000000;
 	bitset<bit_array_size> bit_array;
-
-	int hash_function_std(string line)
-	{
-		hash<string> std_hash;
-		return std_hash(line) % bit_array_size;
-	}
-
-
-	int hash_function_multiply(string line, int index)
-	{
-		hash<string> hash;
-		int prime = primes[index];
-
-		long long hash_value = 0LL;
-		for (int i = 0; i < line.length(); i++)
-		{
-			hash_value = ((hash_value * prime) + line[i]);
-			hash_value = hash_value % bit_array_size;
-		}
-
-		return hash_value;
-	}
-
-
-	vector<int> get_keys(string line)
-	{
-		vector<int> hash_keys;
-
-		//  std hash function:
-		//	hash_keys[0]
-		hash_keys.push_back(hash_function_std(line));
-
-		//  hash functions using multiplication with primes[i]:
-		//	hash_keys[1, .., hash_count - 1]
-		for (int i = 1; i < hash_count; i++)
-		{
-			hash_keys.push_back(hash_function_multiply(line, i));
-		}
-
-		return hash_keys;
-	}
 };
+
+int get_hash_key(string line, int array_size)
+{
+	hash<string> std_hash;
+	return std_hash(line) % array_size;
+}
+
+unordered_map<int, bool> get_duplicate_hashes_map(DataGenerator& generator, int& size)
+{
+	hash_bit_array *bit_array = new hash_bit_array();
+	unordered_map<int, bool> hash_isPossibleDuplicate_map;
+
+
+	for (const string& line : generator)
+	{
+		int hash_key = get_hash_key(line, bit_array->bit_array_size);
+		hash_isPossibleDuplicate_map[hash_key] = bit_array->is_duplicate(line, hash_key);
+	}
+
+	size = bit_array->bit_array_size;
+	delete bit_array;
+
+	unordered_map<int, bool> duplicate_hashes_map;
+	for (auto key_value : hash_isPossibleDuplicate_map)
+	{
+		if (key_value.second)
+			duplicate_hashes_map[key_value.first] = true;
+	}
+
+	return duplicate_hashes_map;
+}
+
+vector<string> get_duplicates(DataGenerator& generator, int size, unordered_map<int, bool> duplicate_hashes_map)
+{
+	vector<string> duplicates;
+	unordered_map<int, string> hash_lines_map;
+
+	for (const string& line : generator)
+	{
+
+		int hash_key = get_hash_key(line, size);
+		if (duplicate_hashes_map[hash_key])
+		{
+			string prefix = line.substr(0, 5);
+			if (prefix == hash_lines_map[hash_key])
+			{
+				duplicates.push_back(line);
+
+			}
+			else
+			{
+				hash_key++;
+				bool is_duplicate = false;
+				while (( !is_duplicate ) && (hash_lines_map.find(hash_key)!=hash_lines_map.end()))
+				{
+					if (prefix == hash_lines_map[hash_key])
+					{
+						is_duplicate = true;
+						duplicates.push_back(line);
+					}
+					hash_key++;
+				}
+				if (!is_duplicate)
+				{
+					hash_lines_map[hash_key] = prefix;
+				}
+			}
+		}
+	}
+	return duplicates;
+}
 
 
 vector<string> find_duplicates(DataGenerator& generator) {
@@ -103,18 +113,7 @@ vector<string> find_duplicates(DataGenerator& generator) {
 	 * Find duplicates in the given data.
 	 */
 
-	int hash_functions_count = 3;
-	bloom_filter *filter = new bloom_filter(hash_functions_count);
-	vector<string> duplicates = {};
-	for (const string& line : generator)
-	{
-		if (filter->is_duplicate(line))
-		{
-			duplicates.push_back(line);
-		}
-	}
-
-	delete filter;
-
-	return duplicates;
+	int bit_array_size = 0;
+	unordered_map<int, bool> duplicate_hashes_map = get_duplicate_hashes_map(generator, bit_array_size);
+	return get_duplicates(generator, bit_array_size, duplicate_hashes_map);
 }
