@@ -1,106 +1,132 @@
 #include <bitset>
 #include <unordered_map>
+#include <unordered_set>
 
-/*** Bit array of hashes for given data ***/
-
-class hash_bit_array {
+/*
+	Data structure that contains hashes of lines
+	in unordered set.
+*/
+class Lines_hashes {
 
 public:
 
-	static const int bit_array_size = 30000000;
+	Lines_hashes()
+	{}
 
-	bool look_up(string line, int hash_key)
+	bool look_up(string line)
 	{
-		return (bit_array[hash_key]);
+		int32_t hash_key = get_hash_key(line);
+		return hashes.find(hash_key) != hashes.end();
 	}
 
-	void insert(string line, int hash_key)
+	void insert(string line)
 	{
-		bit_array[hash_key] = true;
+		int32_t hash_key = get_hash_key(line);
+		hashes.insert(hash_key);
 	}
 
-
-	bool is_duplicate(string line, int hash_key)
+	bool is_duplicate(string line)
 	{
-
-		if (look_up(line, hash_key))
+		if (look_up(line))
 			return true;
 
-		insert(line, hash_key);
+		insert(line);
 		return false;
 	}
 
-
 private:
 
-	bitset<bit_array_size> bit_array;
+	unordered_set<int32_t> hashes;
+
+	int32_t get_hash_key(string line)
+	{
+		hash<string> std_hash;
+		return std_hash(line);
+	}
 };
 
-int get_hash_key(string line, int array_size)
+
+/*
+	Returns whether the hash_key is element of given duplicate_hashes_set
+*/
+bool is_duplicate_hash(unordered_set<int32_t> &duplicate_hashes_set, int32_t hash_key)
 {
-	hash<string> std_hash;
-	return std_hash(line) % array_size;
+	return ((duplicate_hashes_set.find(hash_key)) != duplicate_hashes_set.end());
 }
 
-unordered_map<int, bool> get_duplicate_hashes_map(DataGenerator& generator, int& size)
-{
-	hash_bit_array *bit_array = new hash_bit_array();
-	unordered_map<int, bool> hash_isPossibleDuplicate_map;
 
+/*
+	Returns whether there is a line with given hash_key 
+	in hash_lines_map
+*/
+bool has_hash_key(unordered_map<int32_t, string> &hash_lines_map, int32_t hash_key)
+{
+	return (hash_lines_map.find(hash_key) != hash_lines_map.end());
+}
+
+
+/*
+	Returns set of duplicate hashes of lines
+	for given generator
+*/
+unordered_set<int32_t> get_duplicate_hashes_set(DataGenerator& generator)
+{
+	Lines_hashes *lines_hashes = new Lines_hashes();
+	unordered_set<int32_t> duplicate_hashes_set;
 
 	for (const string& line : generator)
 	{
-		int hash_key = get_hash_key(line, bit_array->bit_array_size);
-		hash_isPossibleDuplicate_map[hash_key] = bit_array->is_duplicate(line, hash_key);
+		hash<string> std_hash;
+		int32_t hash_key = std_hash(line);
+		if (lines_hashes->is_duplicate(line))
+			duplicate_hashes_set.insert(hash_key);
 	}
 
-	size = bit_array->bit_array_size;
-	delete bit_array;
+	delete lines_hashes;
 
-	unordered_map<int, bool> duplicate_hashes_map;
-	for (auto key_value : hash_isPossibleDuplicate_map)
-	{
-		if (key_value.second)
-			duplicate_hashes_map[key_value.first] = true;
-	}
-
-	return duplicate_hashes_map;
+	return duplicate_hashes_set;
 }
 
-vector<string> get_duplicates(DataGenerator& generator, int size, unordered_map<int, bool> duplicate_hashes_map)
+/*
+	Returns duplicate lines
+	for given generator
+*/
+vector<string> get_duplicates(DataGenerator& generator, unordered_set<int32_t> duplicate_hashes_set)
 {
 	vector<string> duplicates;
-	unordered_map<int, string> hash_lines_map;
+	unordered_map<int32_t, string> hash_lines_map;
 
 	for (const string& line : generator)
 	{
+		hash<string> std_hash;
+		int32_t hash_key = std_hash(line);
 
-		int hash_key = get_hash_key(line, size);
-		if (duplicate_hashes_map[hash_key])
+		//	check if line has duplicate hash_key 
+		if (is_duplicate_hash(duplicate_hashes_set, hash_key))
 		{
-			string prefix = line.substr(0, 5);
-			if (prefix == hash_lines_map[hash_key])
-			{
-				duplicates.push_back(line);
+			//	check if line with duplicate hash_key 
+			//	is duplicate
 
-			}
-			else
+			bool is_duplicate_line = false;
+			while ((!is_duplicate_line) && (has_hash_key(hash_lines_map, hash_key)))
 			{
-				hash_key++;
-				bool is_duplicate = false;
-				while (( !is_duplicate ) && (hash_lines_map.find(hash_key)!=hash_lines_map.end()))
+				//	compare line with the string that has same hash_key
+				if (line == hash_lines_map[hash_key])
 				{
-					if (prefix == hash_lines_map[hash_key])
-					{
-						is_duplicate = true;
-						duplicates.push_back(line);
-					}
-					hash_key++;
+					// new duplicate found
+					is_duplicate_line = true;
+					duplicates.push_back(line);
 				}
-				if (!is_duplicate)
-				{
-					hash_lines_map[hash_key] = prefix;
-				}
+				//	increase hash_key to handle possible collision
+				hash_key = (hash_key + 1);
+			}
+
+			if (!is_duplicate_line)
+			{
+				//	line is not duplicate, 
+				//	will be inserted to the next free position 
+				//	after strings with the same hash_key
+				hash_lines_map[hash_key] = line;
 			}
 		}
 	}
@@ -108,12 +134,11 @@ vector<string> get_duplicates(DataGenerator& generator, int size, unordered_map<
 }
 
 
-vector<string> find_duplicates(DataGenerator& generator) {
-	/*
-	 * Find duplicates in the given data.
-	 */
-
-	int bit_array_size = 0;
-	unordered_map<int, bool> duplicate_hashes_map = get_duplicate_hashes_map(generator, bit_array_size);
-	return get_duplicates(generator, bit_array_size, duplicate_hashes_map);
+/*
+	Find duplicates in the given data.
+*/
+vector<string> find_duplicates(DataGenerator& generator)
+{
+	unordered_set<int> duplicate_hashes_set = get_duplicate_hashes_set(generator);
+	return get_duplicates(generator, duplicate_hashes_set);
 }
