@@ -13,19 +13,19 @@ public:
 	Lines_hashes()
 	{}
 
-	bool look_up(string line)
+	bool look_up(const string &line)
 	{
 		int32_t hash_key = get_hash_key(line);
 		return hashes.find(hash_key) != hashes.end();
 	}
 
-	void insert(string line)
+	void insert(const string &line)
 	{
 		int32_t hash_key = get_hash_key(line);
 		hashes.insert(hash_key);
 	}
 
-	bool is_duplicate(string line)
+	bool is_duplicate(const string &line)
 	{
 		if (look_up(line))
 			return true;
@@ -38,7 +38,7 @@ private:
 
 	unordered_set<int32_t> hashes;
 
-	int32_t get_hash_key(string line)
+	int32_t get_hash_key(const string &line)
 	{
 		hash<string> std_hash;
 		return std_hash(line);
@@ -91,7 +91,7 @@ unordered_set<int32_t> get_duplicate_hashes_set(DataGenerator& generator)
 	Returns duplicate lines
 	for given generator
 */
-vector<string> get_duplicates(DataGenerator& generator, unordered_set<int32_t> duplicate_hashes_set)
+vector<string> get_duplicates(DataGenerator& generator, unordered_set<int32_t> &duplicate_hashes_set)
 {
 	vector<string> duplicates;
 	unordered_map<int32_t, string> hash_lines_map;
